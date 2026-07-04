@@ -159,6 +159,8 @@ export default function AdminPanel({
   const [pdvAppliedCoupon, setPdvAppliedCoupon] = useState<Coupon | null>(null);
   const [pdvCouponError, setPdvCouponError] = useState("");
   const [pdvSuccessReceipt, setPdvSuccessReceipt] = useState<Order | null>(null);
+  const [pdvSubTab, setPdvSubTab] = useState<"caixa" | "vendas">("caixa");
+  const [pdvHistorySearch, setPdvHistorySearch] = useState("");
 
   // Load configuration default fields when settings sync
   useEffect(() => {
@@ -1201,7 +1203,7 @@ export default function AdminPanel({
                             />
                           </div>
                           <div>
-                            <label className="block font-bold text-zinc-400 uppercase">Preço Original (R$ - De:)</label>
+                            <label className="block font-bold text-zinc-400 uppercase">Preço Primeira Linha (R$ - De:)</label>
                             <input
                               type="number"
                               step="0.01"
@@ -1642,6 +1644,14 @@ export default function AdminPanel({
                             <span className="text-cyan-400">{formatCurrency(selectedOrderDetail.total)}</span>
                           </div>
                         </div>
+                        
+                        <button
+                          onClick={() => setPdvSuccessReceipt(selectedOrderDetail)}
+                          className="w-full flex items-center justify-center space-x-2 rounded-xl bg-zinc-950 hover:bg-zinc-900 border border-zinc-800 hover:border-zinc-750 py-3 text-xs font-bold uppercase tracking-wider text-zinc-300 hover:text-white transition-colors cursor-pointer"
+                        >
+                          <Printer className="h-4 w-4 text-fuchsia-400 animate-pulse" />
+                          <span>Imprimir Nota do Pedido</span>
+                        </button>
                       </div>
                     ) : (
                       <p className="text-zinc-500 text-center py-12">Clique em algum pedido na tabela ao lado para visualizar os dados completos.</p>
@@ -1659,82 +1669,143 @@ export default function AdminPanel({
             {activeTab === "pdv" && (
               <div className="space-y-6 h-full flex flex-col justify-between">
                 
-                {/* Visual success modal for POS printed receipt */}
-                {pdvSuccessReceipt && (
-                  <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="fixed inset-0 bg-zinc-950/95" onClick={() => setPdvSuccessReceipt(null)} />
-                    <div className="relative z-10 w-full max-w-sm rounded-xl bg-white text-zinc-950 p-6 shadow-2xl space-y-4 font-mono text-xs">
-                      <div className="text-center border-b border-zinc-300 pb-3">
-                        <span className="block font-black text-sm uppercase tracking-widest text-black">CONEXÃO 011</span>
-                        <span className="block text-[10px] text-zinc-500">Av. Oswaldo Cruz, 1594 - Guarujá, SP</span>
-                        <span className="block text-[10px] text-zinc-500">WhatsApp: {settings?.whatsapp}</span>
-                      </div>
-
-                      <div className="space-y-1">
-                        <p><strong>CUPOM NÃO FISCAL</strong></p>
-                        <p>Pedido: #{pdvSuccessReceipt.orderNumber}</p>
-                        <p>Canal: Presencial (PDV)</p>
-                        <p>Data: {new Date(pdvSuccessReceipt.createdAt).toLocaleDateString("pt-BR")} {new Date(pdvSuccessReceipt.createdAt).toLocaleTimeString("pt-BR")}</p>
-                        <p>Cliente: {pdvSuccessReceipt.customer.name}</p>
-                        {pdvSuccessReceipt.customer.phone !== "Balcão PDV" && <p>Tel: {pdvSuccessReceipt.customer.phone}</p>}
-                      </div>
-
-                      <div className="border-t border-b border-dashed border-zinc-400 py-2.5">
-                        <p className="grid grid-cols-3 font-bold border-b border-zinc-200 pb-1 mb-1">
-                          <span>Item</span>
-                          <span className="text-center">Qtd</span>
-                          <span className="text-right">Valor</span>
-                        </p>
-                        {pdvSuccessReceipt.items.map((it, idx) => (
-                          <p key={idx} className="grid grid-cols-3 text-[11px] text-zinc-800 py-0.5">
-                            <span className="truncate">{it.name} ({it.size})</span>
-                            <span className="text-center">x{it.quantity}</span>
-                            <span className="text-right">{formatCurrency(it.price * it.quantity)}</span>
-                          </p>
-                        ))}
-                      </div>
-
-                      <div className="space-y-1 text-right">
-                        <p>Subtotal: {formatCurrency(pdvSuccessReceipt.subtotal)}</p>
-                        {pdvSuccessReceipt.discount > 0 && <p>Desconto: -{formatCurrency(pdvSuccessReceipt.discount)}</p>}
-                        <p className="font-extrabold text-sm text-black">TOTAL: {formatCurrency(pdvSuccessReceipt.total)}</p>
-                        <p className="text-[10px] text-zinc-600 mt-1">Meio Pagto: {pdvSuccessReceipt.paymentMethod.toUpperCase()}</p>
-                      </div>
-
-                      <div className="text-center border-t border-dashed border-zinc-400 pt-3 mt-4 text-[10px] text-zinc-500">
-                        <p>Obrigado pela preferência!</p>
-                        <p>Conexão 011 Streetwear - Itapema</p>
-                      </div>
-
-                      <div className="flex gap-2.5 pt-2">
-                        <button
-                          onClick={() => window.print()}
-                          className="flex-1 rounded border border-zinc-300 text-zinc-700 font-bold hover:bg-zinc-100 py-1.5 flex items-center justify-center space-x-1.5 cursor-pointer"
-                        >
-                          <Printer className="h-3.5 w-3.5" />
-                          <span>Imprimir</span>
-                        </button>
-                        <button
-                          onClick={() => setPdvSuccessReceipt(null)}
-                          className="flex-1 rounded bg-black text-white font-bold hover:bg-zinc-800 py-1.5 text-center cursor-pointer"
-                        >
-                          Fechar
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-800 pb-4">
                   <div>
                     <h2 className="text-xl font-black text-white uppercase tracking-wider text-fuchsia-400">Ponto de Venda (PDV)</h2>
-                    <p className="text-xs text-zinc-400 mt-0.5">Frente de caixa para vendas físicas. Diminui estoque automaticamente.</p>
+                    <p className="text-xs text-zinc-400 mt-0.5">Frente de caixa para vendas físicas e gestão do PDV.</p>
+                  </div>
+                  
+                  {/* Sub-tabs selector */}
+                  <div className="flex bg-zinc-900 p-1 rounded-lg border border-zinc-800 self-start sm:self-auto shrink-0">
+                    <button
+                      onClick={() => setPdvSubTab("caixa")}
+                      className={`flex items-center space-x-1.5 rounded-md px-4 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                        pdvSubTab === "caixa"
+                          ? "bg-fuchsia-500 text-white shadow"
+                          : "text-zinc-400 hover:text-white"
+                      }`}
+                    >
+                      <Store className="h-3.5 w-3.5" />
+                      <span>Nova Venda</span>
+                    </button>
+                    <button
+                      onClick={() => setPdvSubTab("vendas")}
+                      className={`flex items-center space-x-1.5 rounded-md px-4 py-1.5 text-xs font-bold transition-all cursor-pointer ${
+                        pdvSubTab === "vendas"
+                          ? "bg-fuchsia-500 text-white shadow"
+                          : "text-zinc-400 hover:text-white"
+                      }`}
+                    >
+                      <ShoppingBag className="h-3.5 w-3.5" />
+                      <span>Histórico de Vendas</span>
+                    </button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                  
-                  {/* Left side: POS Catalog Browser */}
+                {pdvSubTab === "vendas" ? (
+                  <div className="space-y-4">
+                    {/* Search inside history */}
+                    <div className="flex gap-3 text-xs">
+                      <div className="relative flex-1">
+                        <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-zinc-500" />
+                        <input
+                          type="text"
+                          placeholder="Buscar vendas do PDV por nº pedido, cliente ou telefone..."
+                          value={pdvHistorySearch}
+                          onChange={(e) => setPdvHistorySearch(e.target.value)}
+                          className="w-full rounded-lg border border-zinc-800 bg-zinc-900 pl-8 pr-3 py-2 text-white placeholder-zinc-500 outline-none focus:border-fuchsia-500"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Sales Table */}
+                    <div className="overflow-x-auto rounded-xl border border-zinc-850 bg-zinc-900/40">
+                      <table className="w-full text-left border-collapse text-xs">
+                        <thead>
+                          <tr className="border-b border-zinc-800 text-[10px] font-black uppercase tracking-wider text-zinc-400 bg-zinc-950/40 font-bold">
+                            <th className="p-3.5">Nº Pedido</th>
+                            <th className="p-3.5">Data/Hora</th>
+                            <th className="p-3.5">Cliente</th>
+                            <th className="p-3.5">Itens</th>
+                            <th className="p-3.5">Pagamento</th>
+                            <th className="p-3.5 text-right">Total</th>
+                            <th className="p-3.5 text-center">Ações</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-zinc-850/60">
+                          {orders
+                            .filter((o) => o.type === "pdv")
+                            .filter((o) => {
+                              if (!pdvHistorySearch.trim()) return true;
+                              const term = pdvHistorySearch.toLowerCase();
+                              return (
+                                o.orderNumber.toLowerCase().includes(term) ||
+                                o.customer.name.toLowerCase().includes(term) ||
+                                (o.customer.phone && o.customer.phone.toLowerCase().includes(term))
+                              );
+                            })
+                            .map((o) => (
+                              <tr key={o.id} className="hover:bg-zinc-900/60 transition-colors">
+                                <td className="p-3.5 font-black text-white">#{o.orderNumber}</td>
+                                <td className="p-3.5 text-zinc-400 font-mono">
+                                  {new Date(o.createdAt).toLocaleDateString("pt-BR")}{" "}
+                                  {new Date(o.createdAt).toLocaleTimeString("pt-BR", { hour: '2-digit', minute: '2-digit' })}
+                                </td>
+                                <td className="p-3.5">
+                                  <div className="font-bold text-zinc-200">{o.customer.name}</div>
+                                  <div className="text-[10px] text-zinc-500 font-semibold">{o.customer.phone}</div>
+                                </td>
+                                <td className="p-3.5 text-zinc-300 max-w-xs">
+                                  <div className="truncate" title={o.items.map(it => `${it.name} (${it.size}) x${it.quantity}`).join(", ")}>
+                                    {o.items.map((it) => `${it.name} (${it.size}) x${it.quantity}`).join(", ")}
+                                  </div>
+                                </td>
+                                <td className="p-3.5">
+                                  <span className="rounded bg-fuchsia-950/40 border border-fuchsia-900/30 text-fuchsia-400 font-extrabold text-[9px] px-1.5 py-0.5 uppercase">
+                                    {o.paymentMethod === "pix" ? "Pix" : o.paymentMethod === "card" ? "Cartão" : "Dinheiro"}
+                                  </span>
+                                </td>
+                                <td className="p-3.5 text-right font-black text-fuchsia-400">
+                                  {formatCurrency(o.total)}
+                                </td>
+                                <td className="p-3.5">
+                                  <div className="flex items-center justify-center space-x-2">
+                                    <button
+                                      onClick={() => setPdvSuccessReceipt(o)}
+                                      className="rounded bg-fuchsia-950/50 hover:bg-fuchsia-500 hover:text-white border border-fuchsia-500/20 text-fuchsia-400 p-1.5 transition-all cursor-pointer"
+                                      title="Imprimir nota do pedido completo"
+                                    >
+                                      <Printer className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        o.id && handleDeleteOrder(o.id);
+                                      }}
+                                      className="text-zinc-600 hover:text-red-400 p-1.5 transition-colors cursor-pointer"
+                                      title="Excluir venda"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          {orders.filter((o) => o.type === "pdv").length === 0 && (
+                            <tr>
+                              <td colSpan={7} className="p-8 text-center text-zinc-500">
+                                Nenhuma venda realizada no PDV até o momento.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
+                    
+                    {/* Left side: POS Catalog Browser */}
                   <div className="lg:col-span-3 space-y-4">
                     {/* Catalog search/filters */}
                     <div className="flex gap-3 text-xs">
@@ -1971,6 +2042,7 @@ export default function AdminPanel({
                   </div>
 
                 </div>
+                )}
               </div>
             )}
 
@@ -2230,6 +2302,122 @@ export default function AdminPanel({
             )}
 
           </main>
+
+          {/* Global Visual success modal for POS printed receipt */}
+          {pdvSuccessReceipt && (
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 print-receipt-container">
+              <div className="fixed inset-0 bg-zinc-950/95 print-backdrop" onClick={() => setPdvSuccessReceipt(null)} />
+              <div className="relative z-10 w-full max-w-sm rounded-xl bg-white text-zinc-950 p-6 shadow-2xl space-y-4 font-mono text-xs printable-content">
+                <style dangerouslySetInnerHTML={{__html: `
+                  @media print {
+                    body {
+                      background: white !important;
+                      color: black !important;
+                    }
+                    /* Hide header, sidebar, mobile tabs, other modals, and any buttons */
+                    header, aside, main, #mobile-tab-bar, button, .no-print, .print-backdrop {
+                      display: none !important;
+                    }
+                    .print-receipt-container {
+                      position: absolute !important;
+                      left: 0 !important;
+                      top: 0 !important;
+                      width: 100% !important;
+                      height: auto !important;
+                      background: white !important;
+                      color: black !important;
+                      margin: 0 !important;
+                      padding: 0 !important;
+                      box-shadow: none !important;
+                      display: block !important;
+                      z-index: 9999 !important;
+                    }
+                    .printable-content {
+                      border: none !important;
+                      box-shadow: none !important;
+                      margin: 0 auto !important;
+                      padding: 0 !important;
+                      width: 100% !important;
+                      max-w: 100% !important;
+                      background: white !important;
+                      color: black !important;
+                    }
+                  }
+                `}} />
+
+                <div className="text-center border-b border-zinc-300 pb-3">
+                  <span className="block font-black text-sm uppercase tracking-widest text-black">{setStoreName || "CONEXÃO 011"}</span>
+                  <span className="block text-[10px] text-zinc-500">{setAddress || "Av. Oswaldo Cruz, 1594 - Guarujá, SP"}</span>
+                  <span className="block text-[10px] text-zinc-500">WhatsApp: {setWhatsapp}</span>
+                </div>
+
+                <div className="space-y-1">
+                  <p><strong>CUPOM NÃO FISCAL</strong></p>
+                  <p>Pedido: #{pdvSuccessReceipt.orderNumber}</p>
+                  <p>Canal: {pdvSuccessReceipt.type === "pdv" ? "Presencial (PDV)" : "Loja Online"}</p>
+                  <p>Data: {new Date(pdvSuccessReceipt.createdAt).toLocaleDateString("pt-BR")} {new Date(pdvSuccessReceipt.createdAt).toLocaleTimeString("pt-BR")}</p>
+                  <p>Cliente: {pdvSuccessReceipt.customer.name}</p>
+                  {pdvSuccessReceipt.customer.phone && pdvSuccessReceipt.customer.phone !== "Balcão PDV" && <p>Tel: {pdvSuccessReceipt.customer.phone}</p>}
+                </div>
+
+                {/* Shipping info for online orders */}
+                {pdvSuccessReceipt.type === "online" && (
+                  <div className="border-t border-dashed border-zinc-400 py-2 space-y-0.5 text-[10px] text-zinc-800">
+                    <p className="font-bold">DADOS DE ENTREGA:</p>
+                    <p>CEP: {pdvSuccessReceipt.customer.cep}</p>
+                    <p>Endereço: {pdvSuccessReceipt.customer.street}, Nº {pdvSuccessReceipt.customer.number}</p>
+                    {pdvSuccessReceipt.customer.complement && <p>Compl: {pdvSuccessReceipt.customer.complement}</p>}
+                    <p>Bairro: {pdvSuccessReceipt.customer.neighborhood}</p>
+                    <p>Cidade: {pdvSuccessReceipt.customer.city} - {pdvSuccessReceipt.customer.state}</p>
+                  </div>
+                )}
+
+                <div className="border-t border-b border-dashed border-zinc-400 py-2.5">
+                  <p className="grid grid-cols-3 font-bold border-b border-zinc-200 pb-1 mb-1">
+                    <span>Item</span>
+                    <span className="text-center">Qtd</span>
+                    <span className="text-right">Valor</span>
+                  </p>
+                  {pdvSuccessReceipt.items.map((it, idx) => (
+                    <p key={idx} className="grid grid-cols-3 text-[11px] text-zinc-800 py-0.5">
+                      <span className="truncate">{it.name} ({it.size})</span>
+                      <span className="text-center">x{it.quantity}</span>
+                      <span className="text-right">{formatCurrency(it.price * it.quantity)}</span>
+                    </p>
+                  ))}
+                </div>
+
+                <div className="space-y-1 text-right">
+                  <p>Subtotal: {formatCurrency(pdvSuccessReceipt.subtotal)}</p>
+                  {pdvSuccessReceipt.shippingCost > 0 && <p>Frete: {formatCurrency(pdvSuccessReceipt.shippingCost)}</p>}
+                  {pdvSuccessReceipt.discount > 0 && <p>Desconto: -{formatCurrency(pdvSuccessReceipt.discount)}</p>}
+                  <p className="font-extrabold text-sm text-black">TOTAL: {formatCurrency(pdvSuccessReceipt.total)}</p>
+                  <p className="text-[10px] text-zinc-600 mt-1">Meio Pagto: {pdvSuccessReceipt.paymentMethod.toUpperCase()}</p>
+                </div>
+
+                <div className="text-center border-t border-dashed border-zinc-400 pt-3 mt-4 text-[10px] text-zinc-500">
+                  <p>Obrigado pela preferência!</p>
+                  <p>{setStoreName || "Conexão 011 Streetwear"}</p>
+                </div>
+
+                <div className="flex gap-2.5 pt-2 no-print">
+                  <button
+                    onClick={() => window.print()}
+                    className="flex-1 rounded border border-zinc-300 text-zinc-700 font-bold hover:bg-zinc-100 py-1.5 flex items-center justify-center space-x-1.5 cursor-pointer bg-white"
+                  >
+                    <Printer className="h-3.5 w-3.5" />
+                    <span>Imprimir</span>
+                  </button>
+                  <button
+                    onClick={() => setPdvSuccessReceipt(null)}
+                    className="flex-1 rounded bg-black text-white font-bold hover:bg-zinc-800 py-1.5 text-center cursor-pointer"
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
