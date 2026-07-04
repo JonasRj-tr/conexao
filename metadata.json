@@ -1,0 +1,6 @@
+{
+  "name": "Conexão 011",
+  "description": "Plataforma de e-commerce streetwear completa para a Conexão 011, com catálogo, carrinho com cálculo de frete, área administrativa, PDV e gerenciamento de pedidos.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
