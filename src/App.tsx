@@ -468,7 +468,7 @@ export default function App() {
           </h1>
 
           <p className="mx-auto mt-6 max-w-xl text-sm sm:text-base text-zinc-400 leading-relaxed font-semibold">
-            Kits masculinos premium, Nike Tech Fleece originais e o melhor do streetwear urbano com qualidade absurda e preço justo.
+            Kits masculinos premium, Nike Tech Fleece de alto nível e o melhor do streetwear urbano com qualidade absurda e preço justo.
           </p>
 
           {/* Action Call buttons */}
